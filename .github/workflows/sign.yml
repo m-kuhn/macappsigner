@@ -1,0 +1,42 @@
+---
+name: Sign
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sign:
+    name: Sign
+    runs-on: macos-latest
+    steps:
+      - name: 🐣 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔨 Prepare env
+        run: |
+          brew install create-dmg
+
+      - name: 🔨 Sign and notarize
+        run: |
+          wget https://github.com/opengisch/QField/releases/download/v3.4.7/qfield-v3.4.7-x64-osx.dmg
+          hdiutil attach qfield-v3.4.7-x64-osx.dmg
+          cp -r /Volumes/QField\ Installer/qfield.app qfield.app
+
+          export APP_PATH=qfield.app
+          export DMG_PATH=qfield.dmg
+          echo "${{ secrets.P12_BASE64 }}" | base64 --decode > cert.p12
+          export P12_PATH=cert.p12
+          export P12_PASSWORD=${{ secrets.P12_PASSWORD }}
+          export API_KEY_ID=${{ secrets.API_KEY_ID }}
+          export API_KEY_ISSUER_ID=${{ secrets.API_KEY_ISSUER_ID }}
+          echo "${{ secrets.API_KEY }}" > authkey.p8
+          export API_KEY_PATH=authkey.p8
+
+          ./sign.sh
+          
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: always()
+
